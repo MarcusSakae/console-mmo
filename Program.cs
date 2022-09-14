@@ -1,65 +1,29 @@
-﻿internal class Program
+﻿using System.Net;
+using System.Net.Sockets;
+using System.Text;
+
+internal class Program
 {
-    const int CONSOLE_UPDATE_RATE = 200;
-    const int FIELD_SIZE_X = 60;
-    const int FIELD_SIZE_Y = 30;
-    static bool IsConnected = false;
-    static DateTime nextRender = DateTime.Now.AddMilliseconds(CONSOLE_UPDATE_RATE);
-
-    private static void Main(string[] args)
+    private static async Task Main(string[] args)
     {
-
-        Console.CursorVisible = false;
-        Console.Clear();
-        ClientTCP.InitNetwork(ref IsConnected);
-        if (IsConnected)
-        {
-            Thread _networkThread = new Thread(new ThreadStart(ClientTCP.ReceiveData));
-            Thread _gameThread = new Thread(new ThreadStart(Render));
-            _networkThread.Start();
-            _gameThread.Start();
-        }
-    }
-
-
-    // Render loop
-    private static void Render()
-    {
+        using Socket client = new(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+        await client.ConnectAsync(IPAddress.Parse("127.0.0.1"), 11122);
+        Player player = new();
         while (true)
         {
+            // Send message.
+            var message = "Hi friends 👋!<|EOM|>";
+            var messageBytes = Encoding.UTF8.GetBytes(message);
+            _ = await client.SendAsync(messageBytes, SocketFlags.None);
+            Console.WriteLine($"Socket client sent message: \"{message}\"");
 
 
-            if (DateTime.Now > nextRender)
-            {
-                nextRender = DateTime.Now.AddMilliseconds(CONSOLE_UPDATE_RATE);
-                DrawGameBoard();
-            }
-            else
-            {
-                Thread.Sleep(nextRender - DateTime.Now);
-            }
+            Thread.Sleep(2000);
         }
+
+        client.Shutdown(SocketShutdown.Both);
 
     }
 
-    // draws a 60x30 field
-    private static void DrawGameBoard()
-    {
-        for (int x = 0; x < FIELD_SIZE_X; x++)
-        {
-            for (int y = 0; y < FIELD_SIZE_Y; y++)
-            {
-                Console.SetCursorPosition(x, y);
-                if (x == 0 || x == FIELD_SIZE_X - 1 || y == 0 || y == FIELD_SIZE_Y - 1)
-                {
-                    Console.Write("#");
-                }
-                else
-                {
-                    Console.Write(" ");
-                }
 
-            }
-        }
-    }
 }
